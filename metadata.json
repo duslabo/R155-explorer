@@ -1,0 +1,5 @@
+{
+  "name": "UNECE R155 Navigator",
+  "description": "A digital, searchable, and interactive browser for UN Regulation No. 155 (Cyber Security and CSMS).",
+  "requestFramePermissions": []
+}
