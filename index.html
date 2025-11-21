@@ -1,9 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
+<head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>UNECE R155 Navigator</title>
+    
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -18,7 +20,14 @@
         }
       }
     </script>
-  <script type="importmap">
+
+    <!-- React & ReactDOM (UMD for direct browser usage) -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel for in-browser JSX compilation -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script type="importmap">
 {
   "imports": {
     "react": "https://aistudiocdn.com/react@^19.2.0",
@@ -29,7 +38,719 @@
 }
 </script>
 </head>
-  <body class="bg-gray-50 text-slate-900">
+<body class="bg-gray-50 text-slate-900">
     <div id="root"></div>
-  </body>
+
+    <!-- Application Code -->
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        // --- ICONS (SVG Replacements for Lucide) ---
+        const Icons = {
+            BookOpen: ({className, size=24}) => (
+                <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+            ),
+            ShieldAlert: ({className, size=24}) => (
+                <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            ),
+            Search: ({className, size=24}) => (
+                <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            ),
+            Menu: ({className, size=24}) => (
+                <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+            ),
+            X: ({className, size=24}) => (
+                <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            ),
+            AlertTriangle: ({className, size=24}) => (
+                <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            ),
+            CheckCircle: ({className, size=24}) => (
+                <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            ),
+            Filter: ({className, size=24}) => (
+                <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+            ),
+            ChevronDown: ({className, size=24}) => (
+                <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="6 9 12 15 18 9"/></svg>
+            ),
+            ChevronUp: ({className, size=24}) => (
+                <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="18 15 12 9 6 15"/></svg>
+            ),
+            ChevronRight: ({className, size=24}) => (
+                <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="9 18 15 12 9 6"/></svg>
+            ),
+            FileText: ({className, size=24}) => (
+                <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            ),
+            Tag: ({className, size=24}) => (
+                <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+            )
+        };
+
+        // --- DATA CONSTANTS ---
+
+        const MITIGATIONS_DB = {
+            'M1': 'Security Controls are applied to back-end systems to minimise the risk of insider attack.',
+            'M2': 'Security Controls are applied to back-end systems to minimise unauthorised access. Example Security Controls can be found in OWASP.',
+            'M3': 'Security Controls are applied to back-end systems. Where back-end servers are critical to the provision of services there are recovery measures in case of system outage. Example Security Controls can be found in OWASP.',
+            'M4': 'Security Controls are applied to minimise risks associated with cloud computing. Example Security Controls can be found in OWASP and NCSC cloud computing guidance.',
+            'M5': 'Security Controls are applied to back-end systems to prevent data breaches. Example Security Controls can be found in OWASP.',
+            'M6': 'Systems shall implement security by design to minimize risks.',
+            'M7': 'Access control techniques and designs shall be applied to protect system data/code. Example Security Controls can be found in OWASP.',
+            'M8': 'Through system design and access control it should not be possible for unauthorised personnel to access personal or system critical data. Example of Security Controls can be found in OWASP.',
+            'M9': 'Measures to prevent and detect unauthorized access shall be employed.',
+            'M10': 'The vehicle shall verify the authenticity and integrity of messages it receives.',
+            'M11': 'Security controls shall be implemented for storing cryptographic keys (e.g., use of Hardware Security Modules).',
+            'M12': 'Confidential data transmitted to or from the vehicle shall be protected.',
+            'M13': 'Measures to detect and recover from a denial of service attack shall be employed.',
+            'M14': 'Measures to protect systems against embedded viruses/malware should be considered.',
+            'M15': 'Measures to detect malicious internal messages or activity should be considered.',
+            'M16': 'Secure software update procedures shall be employed.',
+            'M18': 'Measures shall be implemented for defining and controlling user roles and access privileges, based on the principle of least access privilege.',
+            'M19': 'Organizations shall ensure security procedures are defined and followed including logging of actions and access related to the management of the security functions.',
+            'M20': 'Security controls shall be applied to systems that have remote access.',
+            'M21': 'Software shall be security assessed, authenticated and integrity protected. Security controls shall be applied to minimise the risk from third party software that is intended or foreseeable to be hosted on the vehicle.',
+            'M22': 'Security controls shall be applied to external interfaces.',
+            'M23': 'Cybersecurity best practices for software and hardware development shall be followed. Cybersecurity testing with adequate coverage. Cybersecurity best practices for system design and system integration shall be followed.',
+            'M24': 'Best practices for the protection of data integrity and confidentiality shall be followed for storing personal data. Example Security Controls can be found in ISO/SC27/WG5.'
+        };
+
+        const THREATS_DATA = [
+            // 4.3.1 Threats regarding back-end servers
+            { id: '1.1', category: 'Back-end servers', description: 'Back-end servers used as a means to attack a vehicle or extract data', example: 'Abuse of privileges by staff (insider attack)', mitigationRefs: ['M1'] },
+            { id: '1.2', category: 'Back-end servers', description: 'Back-end servers used as a means to attack a vehicle or extract data', example: 'Unauthorized internet access to the server (enabled for example by backdoors, unpatched system software vulnerabilities, SQL attacks or other means)', mitigationRefs: ['M2'] },
+            { id: '1.3', category: 'Back-end servers', description: 'Back-end servers used as a means to attack a vehicle or extract data', example: 'Unauthorized physical access to the server (conducted by for example USB sticks or other media connecting to the server)', mitigationRefs: ['M8'] },
+            { id: '2.1', category: 'Back-end servers', description: 'Services from back-end server being disrupted, affecting the operation of a vehicle', example: 'Attack on back-end server stops it functioning, for example it prevents it from interacting with vehicles and providing services they rely on', mitigationRefs: ['M3'] },
+            { id: '3.1', category: 'Back-end servers', description: 'Vehicle related data held on back-end servers being lost or compromised ("data breach")', example: 'Abuse of privileges by staff (insider attack)', mitigationRefs: ['M1'] },
+            { id: '3.2', category: 'Back-end servers', description: 'Vehicle related data held on back-end servers being lost or compromised ("data breach")', example: 'Loss of information in the cloud. Sensitive data may be lost due to attacks or accidents when data is stored by third-party cloud service providers', mitigationRefs: ['M4'] },
+            { id: '3.3', category: 'Back-end servers', description: 'Vehicle related data held on back-end servers being lost or compromised ("data breach")', example: 'Unauthorized internet access to the server (enabled for example by backdoors, unpatched system software vulnerabilities, SQL attacks or other means)', mitigationRefs: ['M2'] },
+            { id: '3.4', category: 'Back-end servers', description: 'Vehicle related data held on back-end servers being lost or compromised ("data breach")', example: 'Unauthorized physical access to the server (conducted for example by USB sticks or other media connecting to the server)', mitigationRefs: ['M8'] },
+            { id: '3.5', category: 'Back-end servers', description: 'Vehicle related data held on back-end servers being lost or compromised ("data breach")', example: 'Information breach by unintended sharing of data (e.g. admin errors)', mitigationRefs: ['M5'] },
+            
+            // 4.3.2 Threats to vehicles regarding their communication channels
+            { id: '4.1', category: 'Vehicle communication channels', description: 'Spoofing of messages or data received by the vehicle', example: 'Spoofing of messages by impersonation (e.g. 802.11p V2X during platooning, GNSS messages, etc.)', mitigationRefs: ['M10'] },
+            { id: '4.2', category: 'Vehicle communication channels', description: 'Spoofing of messages or data received by the vehicle', example: 'Sybil attack (in order to spoof other vehicles as if there are many vehicles on the road)', mitigationRefs: ['M11'] },
+            { id: '5.1', category: 'Vehicle communication channels', description: 'Communication channels used to conduct unauthorized manipulation, deletion or other amendments to vehicle held code/data', example: 'Communications channels permit code injection, for example tampered software binary might be injected into the communication stream', mitigationRefs: ['M10', 'M6'] },
+            { id: '5.2', category: 'Vehicle communication channels', description: 'Communication channels used to conduct unauthorized manipulation, deletion or other amendments to vehicle held code/data', example: 'Communications channels permit manipulate of vehicle held data/code', mitigationRefs: ['M7'] },
+            { id: '5.3', category: 'Vehicle communication channels', description: 'Communication channels used to conduct unauthorized manipulation, deletion or other amendments to vehicle held code/data', example: 'Communications channels permit overwrite of vehicle held data/code', mitigationRefs: ['M7'] },
+            { id: '5.4', category: 'Vehicle communication channels', description: 'Communication channels used to conduct unauthorized manipulation, deletion or other amendments to vehicle held code/data', example: 'Communications channels permit erasure of vehicle held data/code', mitigationRefs: ['M7'] },
+            { id: '5.5', category: 'Vehicle communication channels', description: 'Communication channels used to conduct unauthorized manipulation, deletion or other amendments to vehicle held code/data', example: 'Communications channels permit introduction of data/code to the vehicle (write data code)', mitigationRefs: ['M7'] },
+            { id: '6.1', category: 'Vehicle communication channels', description: 'Communication channels permit untrusted/unreliable messages to be accepted or are', example: 'Accepting information from an unreliable or untrusted source', mitigationRefs: ['M10'] },
+            { id: '6.2', category: 'Vehicle communication channels', description: 'Communication channels permit untrusted/unreliable messages to be accepted or are', example: 'Man in the middle attack/ session hijacking', mitigationRefs: ['M10'] },
+            { id: '6.3', category: 'Vehicle communication channels', description: 'Communication channels permit untrusted/unreliable messages to be accepted or are vulnerable to session hijacking/replay attacks', example: 'Replay attack, for example an attack against a communication gateway allows the attacker to downgrade software of an ECU or firmware of the gateway', mitigationRefs: ['M10'] },
+            { id: '7.1', category: 'Vehicle communication channels', description: 'Information can be readily disclosed. For example, through eavesdropping on communications or through allowing unauthorized access to sensitive files or folders', example: 'Interception of information / interfering radiations / monitoring communications', mitigationRefs: ['M12'] },
+            { id: '7.2', category: 'Vehicle communication channels', description: 'Information can be readily disclosed. For example, through eavesdropping on communications or through allowing unauthorized access to sensitive files or folders', example: 'Gaining unauthorized access to files or data', mitigationRefs: ['M8'] },
+            { id: '8.1', category: 'Vehicle communication channels', description: 'Denial of service attacks via communication channels to disrupt vehicle functions', example: 'Sending a large number of garbage data to vehicle information system, so that it is unable to provide services in the normal manner', mitigationRefs: ['M13'] },
+            { id: '8.2', category: 'Vehicle communication channels', description: 'Denial of service attacks via communication channels to disrupt vehicle functions', example: 'Black hole attack, in order to disrupt communication between vehicles the attacker is able to block messages between the vehicles', mitigationRefs: ['M13'] },
+            { id: '9.1', category: 'Vehicle communication channels', description: 'An unprivileged user is able to gain privileged access to vehicle systems', example: 'An unprivileged user is able to gain privileged access, for example root access', mitigationRefs: ['M9'] },
+            { id: '10.1', category: 'Vehicle communication channels', description: 'Viruses embedded in communication media are able to infect vehicle systems', example: 'Virus embedded in communication media infects vehicle systems', mitigationRefs: ['M14'] },
+            { id: '11.1', category: 'Vehicle communication channels', description: 'Messages received by the vehicle or transmitted within it, contain malicious content', example: 'Malicious internal (e.g. CAN) messages', mitigationRefs: ['M15'] },
+            { id: '11.2', category: 'Vehicle communication channels', description: 'Messages received by the vehicle or transmitted within it, contain malicious content', example: 'Malicious V2X messages, e.g. infrastructure to vehicle or vehicle-vehicle messages (e.g. CAM, DENM)', mitigationRefs: ['M10'] },
+            { id: '11.3', category: 'Vehicle communication channels', description: 'Messages received by the vehicle or transmitted within it, contain malicious content', example: 'Malicious diagnostic messages', mitigationRefs: ['M10'] },
+            { id: '11.4', category: 'Vehicle communication channels', description: 'Messages received by the vehicle or transmitted within it, contain malicious content', example: 'Malicious proprietary messages (e.g. those normally sent from OEM or component/system/function supplier)', mitigationRefs: ['M10'] },
+
+            // 4.3.3 Threats to vehicles regarding their update procedures
+            { id: '12.1', category: 'Update process', description: 'Misuse or compromise of update procedures', example: 'Compromise of over the air software update procedures. This includes fabricating the system update program or firmware', mitigationRefs: ['M16'] },
+            { id: '12.2', category: 'Update process', description: 'Misuse or compromise of update procedures', example: 'Compromise of local/physical software update procedures. This includes fabricating the system update program or firmware', mitigationRefs: ['M16'] },
+            { id: '12.3', category: 'Update process', description: 'Misuse or compromise of update procedures', example: 'The software is manipulated before the update process (and is therefore corrupted), although the update process is intact', mitigationRefs: ['M16'] },
+            { id: '12.4', category: 'Update process', description: 'Misuse or compromise of update procedures', example: 'Compromise of cryptographic keys of the software provider to allow invalid update', mitigationRefs: ['M11'] },
+            { id: '13.1', category: 'Update process', description: 'It is possible to deny legitimate updates', example: 'Denial of Service attack against update server or network to prevent rollout of critical software updates and/or unlock of customer specific features', mitigationRefs: ['M3'] },
+
+            // 4.3.4 Threats to vehicles regarding unintended human actions
+            { id: '15.1', category: 'Unintended human actions', description: 'Legitimate actors are able to take actions that would unwittingly facilitate a cyber-attack', example: 'Innocent victim (e.g. owner, operator or maintenance engineer) being tricked into taking an action to unintentionally load malware or enable an attack', mitigationRefs: ['M18'] },
+            { id: '15.2', category: 'Unintended human actions', description: 'Legitimate actors are able to take actions that would unwittingly facilitate a cyber-attack', example: 'Defined security procedures are not followed', mitigationRefs: ['M19'] },
+
+            // 4.3.5 Threats to vehicles regarding their external connectivity
+            { id: '16.1', category: 'External connectivity', description: 'Manipulation of the connectivity of vehicle functions enables a cyber-attack', example: 'Manipulation of functions designed to remotely operate systems, such as remote key, immobilizer, and charging pile', mitigationRefs: ['M20'] },
+            { id: '16.2', category: 'External connectivity', description: 'Manipulation of the connectivity of vehicle functions enables a cyber-attack', example: 'Manipulation of vehicle telematics (e.g. manipulate temperature measurement of sensitive goods, remotely unlock cargo doors)', mitigationRefs: ['M20'] },
+            { id: '16.3', category: 'External connectivity', description: 'Manipulation of the connectivity of vehicle functions enables a cyber-attack', example: 'Interference with short range wireless systems or sensors', mitigationRefs: ['M20'] },
+            { id: '17.1', category: 'External connectivity', description: 'Hosted 3rd party software, e.g. entertainment applications, used as a means to attack vehicle systems', example: 'Corrupted applications, or those with poor software security, used as a method to attack vehicle systems', mitigationRefs: ['M21'] },
+            { id: '18.1', category: 'External connectivity', description: 'Devices connected to external interfaces e.g. USB ports, OBD port, used as a means to attack vehicle systems', example: 'External interfaces such as USB or other ports used as a point of attack, for example through code injection', mitigationRefs: ['M22'] },
+            { id: '18.2', category: 'External connectivity', description: 'Devices connected to external interfaces e.g. USB ports, OBD port, used as a means to attack vehicle systems', example: 'Media infected with a virus connected to a vehicle system', mitigationRefs: ['M22'] },
+            { id: '18.3', category: 'External connectivity', description: 'Devices connected to external interfaces e.g. USB ports, OBD port, used as a means to attack vehicle systems', example: 'Diagnostic access (e.g. dongles in OBD port) used to facilitate an attack, e.g. manipulate vehicle parameters (directly or indirectly)', mitigationRefs: ['M22'] },
+
+            // 4.3.6 Threats to vehicle data/code
+            { id: '19.1', category: 'Vehicle data/code', description: 'Extraction of vehicle data/code', example: 'Extraction of copyright or proprietary software from vehicle systems (product piracy)', mitigationRefs: ['M7'] },
+            { id: '19.2', category: 'Vehicle data/code', description: 'Extraction of vehicle data/code', example: 'Unauthorized access to the owner’s privacy information such as personal identity, payment account information, address book information, location information, vehicle’s electronic ID, etc.', mitigationRefs: ['M8'] },
+            { id: '19.3', category: 'Vehicle data/code', description: 'Extraction of vehicle data/code', example: 'Extraction of cryptographic keys', mitigationRefs: ['M11'] },
+            { id: '20.1', category: 'Vehicle data/code', description: 'Manipulation of vehicle data/code', example: 'Illegal/unauthorized changes to vehicle’s electronic ID', mitigationRefs: ['M7'] },
+            { id: '20.2', category: 'Vehicle data/code', description: 'Manipulation of vehicle data/code', example: 'Identity fraud. For example, if a user wants to display another identity when communicating with toll systems, manufacturer backend', mitigationRefs: ['M7'] },
+            { id: '20.3', category: 'Vehicle data/code', description: 'Manipulation of vehicle data/code', example: 'Action to circumvent monitoring systems (e.g. hacking/ tampering/ blocking of messages such as ODR Tracker data, or number of runs)', mitigationRefs: ['M7'] },
+            { id: '20.4', category: 'Vehicle data/code', description: 'Manipulation of vehicle data/code', example: 'Data manipulation to falsify vehicle’s driving data (e.g. mileage, driving speed, driving directions, etc.)', mitigationRefs: ['M7'] },
+            { id: '20.5', category: 'Vehicle data/code', description: 'Manipulation of vehicle data/code', example: 'Unauthorized changes to system diagnostic data', mitigationRefs: ['M7'] },
+            { id: '21.1', category: 'Vehicle data/code', description: 'Erasure of data/code', example: 'Unauthorized deletion/manipulation of system event logs', mitigationRefs: ['M7'] },
+            { id: '22.2', category: 'Vehicle data/code', description: 'Introduction of malware', example: 'Introduce malicious software or malicious software activity', mitigationRefs: ['M7'] },
+            { id: '23.1', category: 'Vehicle data/code', description: 'Introduction of new software or overwrite existing software', example: 'Fabrication of software of the vehicle control system or information system', mitigationRefs: ['M7'] },
+            { id: '24.1', category: 'Vehicle data/code', description: 'Disruption of systems or operations', example: 'Denial of service, for example this may be triggered on the internal network by flooding a CAN bus, or by provoking faults on an ECU via a high rate of messaging', mitigationRefs: ['M13'] },
+            { id: '25.1', category: 'Vehicle data/code', description: 'Manipulation of vehicle parameters', example: 'Unauthorized access of falsify the configuration parameters of vehicle’s key functions, such as brake data, airbag deployed threshold, etc.', mitigationRefs: ['M7'] },
+            { id: '25.2', category: 'Vehicle data/code', description: 'Manipulation of vehicle parameters', example: 'Unauthorized access of falsify the charging parameters, such as charging voltage, charging power, battery temperature, etc.', mitigationRefs: ['M7'] },
+
+            // 4.3.7 Potential vulnerabilities
+            { id: '26.1', category: 'Vulnerabilities', description: 'Cryptographic technologies can be compromised or are insufficiently applied', example: 'Combination of short encryption keys and long period of validity enables attacker to break encryption', mitigationRefs: ['M23'] },
+            { id: '26.2', category: 'Vulnerabilities', description: 'Cryptographic technologies can be compromised or are insufficiently applied', example: 'Insufficient use of cryptographic algorithms to protect sensitive systems', mitigationRefs: ['M23'] },
+            { id: '26.3', category: 'Vulnerabilities', description: 'Cryptographic technologies can be compromised or are insufficiently applied', example: 'Using already or soon to be deprecated cryptographic algorithms', mitigationRefs: ['M23'] },
+            { id: '27.1', category: 'Vulnerabilities', description: 'Parts or supplies could be compromised to permit vehicles to be attacked', example: 'Hardware or software, engineered to enable an attack or fails to meet design criteria to stop an attack', mitigationRefs: ['M23'] },
+            { id: '28.1', category: 'Vulnerabilities', description: 'Software or hardware development permits vulnerabilities', example: 'Software bugs. The presence of software bugs can be a basis for potential exploitable vulnerabilities.', mitigationRefs: ['M23'] },
+            { id: '28.2', category: 'Vulnerabilities', description: 'Software or hardware development permits vulnerabilities', example: 'Using remainders from development (e.g. debug ports, JTAG ports, microprocessors, development certificates, developer passwords, …) can permit access to ECUs or permit attackers to gain higher privileges', mitigationRefs: ['M23'] },
+            { id: '29.1', category: 'Vulnerabilities', description: 'Network design introduces vulnerabilities', example: 'Superfluous internet ports left open, providing access to network systems', mitigationRefs: ['M23'] },
+            { id: '29.2', category: 'Vulnerabilities', description: 'Network design introduces vulnerabilities', example: 'Circumvent network separation to gain control. Specific example is the use of unprotected gateways, or access points (such as truck-trailer gateways)', mitigationRefs: ['M23'] },
+            { id: '31.1', category: 'Data loss (Part B)', description: 'Unintended transfer of data can occur', example: 'Information breach. Personal data may be leaked when the car changes user (e.g. is sold or is used as hire vehicle with new hirers)', mitigationRefs: ['M24'] },
+            { id: '32.1', category: 'Physical manipulation', description: 'Physical manipulation of systems can enable an attack', example: 'Manipulation of electronic hardware, e.g. unauthorized electronic hardware added to a vehicle to enable "man-in-the-middle" attack', mitigationRefs: ['M9'] },
+
+            // Part C - Physical loss of data (outside vehicle)
+            { id: '30.1', category: 'Physical loss of data', description: 'Physical loss of data', example: 'Damage caused by a third party. Sensitive data may be lost or compromised due to physical damages in cases of traffic accident or theft', mitigationRefs: ['M24'] },
+            { id: '30.2', category: 'Physical loss of data', description: 'Physical loss of data', example: 'Loss from DRM (digital right management) conflicts. User data may be deleted due to DRM issues', mitigationRefs: ['M24'] },
+            { id: '30.3', category: 'Physical loss of data', description: 'Physical loss of data', example: 'The (integrity of) sensitive data may be lost due to IT components wear and tear, causing potential cascading issues (in case of key alteration, for example)', mitigationRefs: ['M24'] }
+        ];
+
+        const SECTIONS = [
+            {
+                id: '1',
+                title: '1. Scope',
+                tags: ['Scope', 'Categories'],
+                content: `1.1. This Regulation applies to vehicles, with regard to cyber security, of the Categories M and N. This Regulation also applies to vehicles of Category O if fitted with at least one electronic control unit.
+
+1.2. This Regulation also applies to vehicles of the Categories L6 and L7 if equipped with automated driving functionalities from level 3 onwards.
+
+1.3. This Regulation is without prejudice to other UN Regulations, regional or national legislations governing the access by authorized parties to the vehicle, its data, functions and resources.`
+            },
+            {
+                id: '2',
+                title: '2. Definitions',
+                tags: ['Definitions', 'Glossary'],
+                subsections: [
+                {
+                    id: '2.1',
+                    title: '2.1 Vehicle type',
+                    content: 'Means vehicles which do not differ in at least the following essential respects: (a) The manufacturer’s designation of the vehicle type; (b) Essential aspects of the electric/electronic architecture and external interfaces with respect to cyber security.'
+                },
+                {
+                    id: '2.2',
+                    title: '2.2 Cyber security',
+                    content: 'Means the condition in which road vehicles and their functions are protected from cyber threats to electrical or electronic components.'
+                },
+                {
+                    id: '2.3',
+                    title: '2.3 Cyber Security Management System (CSMS)',
+                    content: 'Means a systematic risk-based approach defining organisational processes, responsibilities and governance to treat risk associated with cyber threats to vehicles and protect them from cyber attacks.'
+                },
+                {
+                    id: '2.8',
+                    title: '2.8 Mitigation',
+                    content: 'Means a measure that is reducing risk.'
+                },
+                {
+                    id: '2.9',
+                    title: '2.9 Risk',
+                    content: 'Means the potential that a given threat will exploit vulnerabilities of a vehicle and thereby cause harm to the organization or to an individual.'
+                }
+                ]
+            },
+            {
+                id: '5',
+                title: '5. Approval',
+                tags: ['Approval', 'Requirements'],
+                content: `5.1. Approval Authorities shall grant, as appropriate, type approval with regard to cyber security, only to such vehicle types that satisfy the requirements of this Regulation.
+                
+5.1.1. The Approval Authority or the Technical Service shall verify by means of document checks that the vehicle manufacturer has taken the necessary measures relevant for the vehicle type to:
+(a) Collect and verify the information required under this Regulation through the supply chain;
+(b) Document risks assessment, test results and mitigations applied to the vehicle type;
+(c) Implement appropriate cyber security measures in the design of the vehicle type;
+(d) Detect and respond to possible cyber security attacks;
+(e) Log data to support the detection of cyber-attacks and provide data forensic capability.`
+            },
+            {
+                id: '7',
+                title: '7. Specifications',
+                tags: ['Specifications', 'CSMS', 'Risk Assessment'],
+                subsections: [
+                    {
+                        id: '7.2',
+                        title: '7.2 Requirements for the Cyber Security Management System',
+                        content: `7.2.2. The Cyber Security Management System shall cover the following aspects:
+(a) The processes used within the manufacturer’s organization to manage cyber security;
+(b) The processes used for the identification of risks to vehicle types;
+(c) The processes used for the assessment, categorization and treatment of the risks identified;
+(d) The processes in place to verify that the risks identified are appropriately managed;
+(e) The processes used for testing the cyber security of a vehicle type;
+(f) The processes used for ensuring that the risk assessment is kept current;`
+                    },
+                    {
+                        id: '7.3',
+                        title: '7.3 Requirements for vehicle types',
+                        content: `7.3.1. The manufacturer shall have a valid Certificate of Compliance for the Cyber Security Management System relevant to the vehicle type being approved.
+                        
+7.3.3. The vehicle manufacturer shall identify the critical elements of the vehicle type and perform an exhaustive risk assessment for the vehicle type and shall treat/manage the identified risks appropriately.`
+                    }
+                ]
+            },
+            {
+                id: 'annex-5',
+                title: 'Annex 5: Threats & Mitigations',
+                type: 'threat_table',
+                tags: ['Annex', 'Threats', 'Mitigations', 'Table A1'],
+                content: 'Interactive explorer for Table A1 (Threats) and Tables B/C (Mitigations).'
+            }
+        ];
+
+        const ViewType = {
+            DOCUMENT: 'DOCUMENT',
+            THREAT_EXPLORER: 'THREAT_EXPLORER',
+            SEARCH: 'SEARCH'
+        };
+
+        // --- COMPONENTS ---
+
+        const Sidebar = ({ currentSectionId, onSectionSelect, onViewChange, currentView, isMobileOpen, setIsMobileOpen }) => {
+            return (
+                <React.Fragment>
+                    {/* Mobile Overlay */}
+                    {isMobileOpen && (
+                        <div 
+                        className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+                        onClick={() => setIsMobileOpen(false)}
+                        />
+                    )}
+
+                    {/* Sidebar Content */}
+                    <div className={`
+                        fixed top-0 left-0 h-full bg-slate-900 text-white w-64 z-50 transition-transform duration-300 ease-in-out
+                        md:translate-x-0 md:static md:h-screen overflow-y-auto border-r border-slate-700
+                        ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'}
+                    `}>
+                        <div className="p-6 border-b border-slate-700 flex justify-between items-center">
+                            <div className="flex items-center space-x-2 font-bold text-xl">
+                                <Icons.ShieldAlert className="text-blue-400" />
+                                <span>UNECE R155</span>
+                            </div>
+                            <button onClick={() => setIsMobileOpen(false)} className="md:hidden">
+                                <Icons.X size={24} />
+                            </button>
+                        </div>
+
+                        <div className="p-4">
+                            <div className="mb-6">
+                                <h3 className="text-xs uppercase text-slate-400 font-semibold tracking-wider mb-3">Tools</h3>
+                                <button
+                                    onClick={() => { onViewChange(ViewType.SEARCH); setIsMobileOpen(false); }}
+                                    className={`w-full flex items-center space-x-3 px-4 py-2 rounded-lg transition-colors ${
+                                        currentView === ViewType.SEARCH ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800'
+                                    }`}
+                                >
+                                    <Icons.Search size={18} />
+                                    <span>Global Search</span>
+                                </button>
+                                <button
+                                    onClick={() => { onSectionSelect('annex-5'); setIsMobileOpen(false); }}
+                                    className={`w-full flex items-center space-x-3 px-4 py-2 mt-2 rounded-lg transition-colors ${
+                                        currentSectionId === 'annex-5' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800'
+                                    }`}
+                                >
+                                    <Icons.ShieldAlert size={18} />
+                                    <span>Threat Explorer</span>
+                                </button>
+                            </div>
+
+                            <div className="mb-6">
+                                <h3 className="text-xs uppercase text-slate-400 font-semibold tracking-wider mb-3">Regulation Text</h3>
+                                <nav className="space-y-1">
+                                    {SECTIONS.filter(s => s.id !== 'annex-5').map((section) => (
+                                        <button
+                                        key={section.id}
+                                        onClick={() => { onSectionSelect(section.id); setIsMobileOpen(false); }}
+                                        className={`w-full text-left px-4 py-2 rounded-lg text-sm transition-colors ${
+                                            currentSectionId === section.id && currentView === ViewType.DOCUMENT
+                                            ? 'bg-slate-800 text-blue-400 border-l-2 border-blue-400' 
+                                            : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                                        }`}
+                                        >
+                                        {section.title}
+                                        </button>
+                                    ))}
+                                </nav>
+                            </div>
+                        </div>
+
+                        <div className="p-4 border-t border-slate-800 mt-auto">
+                            <p className="text-xs text-slate-500 text-center">
+                                UN Regulation No. 155<br/>
+                                Addendum 154
+                            </p>
+                        </div>
+                    </div>
+                </React.Fragment>
+            );
+        };
+
+        const ThreatExplorer = () => {
+            const [searchTerm, setSearchTerm] = useState('');
+            const [selectedCategory, setSelectedCategory] = useState('All');
+            const [expandedThreatId, setExpandedThreatId] = useState(null);
+
+            // Get unique categories
+            const categories = useMemo(() => {
+                const cats = new Set(THREATS_DATA.map(t => t.category));
+                return ['All', ...Array.from(cats)];
+            }, []);
+
+            // Filter threats
+            const filteredThreats = useMemo(() => {
+                return THREATS_DATA.filter(threat => {
+                const matchesSearch = 
+                    threat.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    (threat.example && threat.example.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                    threat.id.includes(searchTerm);
+                
+                const matchesCategory = selectedCategory === 'All' || threat.category === selectedCategory;
+
+                return matchesSearch && matchesCategory;
+                });
+            }, [searchTerm, selectedCategory]);
+
+            const toggleExpand = (id) => {
+                setExpandedThreatId(expandedThreatId === id ? null : id);
+            };
+
+            return (
+                <div className="p-6 max-w-6xl mx-auto">
+                <div className="mb-8">
+                    <h2 className="text-3xl font-bold text-slate-900 mb-2 flex items-center">
+                    <Icons.AlertTriangle className="mr-3 text-orange-500" size={32} />
+                    Annex 5: Threat Explorer
+                    </h2>
+                    <p className="text-slate-600 text-lg">
+                    Interactive mapping of Table A1 (Threats) to Table B1/C1 (Mitigations).
+                    </p>
+                </div>
+
+                {/* Controls */}
+                <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-6 flex flex-col md:flex-row gap-4 justify-between items-center">
+                    <div className="relative w-full md:w-96">
+                    <Icons.Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                    <input
+                        type="text"
+                        placeholder="Search threats, ID (e.g., 4.1), or keywords..."
+                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                    </div>
+                    
+                    <div className="flex items-center space-x-2 w-full md:w-auto">
+                    <Icons.Filter size={18} className="text-gray-500" />
+                    <select
+                        value={selectedCategory}
+                        onChange={(e) => setSelectedCategory(e.target.value)}
+                        className="w-full md:w-64 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white"
+                    >
+                        {categories.map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
+                        ))}
+                    </select>
+                    </div>
+                </div>
+
+                {/* Results */}
+                <div className="space-y-4">
+                    {filteredThreats.length === 0 && (
+                        <div className="text-center py-12 text-gray-500">
+                            No threats found matching your criteria.
+                        </div>
+                    )}
+                    
+                    {filteredThreats.map((threat) => {
+                    const isExpanded = expandedThreatId === threat.id;
+                    return (
+                        <div 
+                        key={threat.id} 
+                        className={`bg-white rounded-xl border transition-all duration-200 overflow-hidden ${
+                            isExpanded ? 'border-blue-500 shadow-md' : 'border-gray-200 hover:border-blue-300'
+                        }`}
+                        >
+                        <div 
+                            className="p-5 cursor-pointer flex items-start gap-4"
+                            onClick={() => toggleExpand(threat.id)}
+                        >
+                            <div className="flex-shrink-0 bg-slate-100 text-slate-700 font-mono font-bold px-3 py-1 rounded text-sm">
+                            {threat.id}
+                            </div>
+                            
+                            <div className="flex-grow">
+                            <div className="flex items-center gap-3 mb-1">
+                                <span className="text-xs font-semibold uppercase tracking-wide text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+                                {threat.category}
+                                </span>
+                            </div>
+                            <h3 className="text-lg font-medium text-slate-900 mb-1">{threat.description}</h3>
+                            <p className="text-slate-500 text-sm">{threat.example}</p>
+                            </div>
+
+                            <div className="flex-shrink-0 self-center">
+                                {isExpanded ? <Icons.ChevronUp className="text-gray-400"/> : <Icons.ChevronDown className="text-gray-400"/>}
+                            </div>
+                        </div>
+
+                        {/* Expanded Mitigations Section */}
+                        {isExpanded && (
+                            <div className="bg-slate-50 p-5 border-t border-gray-100 animate-fadeIn">
+                            <h4 className="text-sm font-bold text-slate-700 uppercase mb-3 flex items-center">
+                                <Icons.CheckCircle size={16} className="mr-2 text-green-600" />
+                                Required Mitigations
+                            </h4>
+                            <div className="grid gap-3">
+                                {threat.mitigationRefs && threat.mitigationRefs.length > 0 ? (
+                                threat.mitigationRefs.map(ref => (
+                                    <div key={ref} className="bg-white p-3 rounded-lg border border-gray-200 shadow-sm flex gap-3">
+                                    <span className="flex-shrink-0 bg-green-100 text-green-800 font-mono font-bold text-xs px-2 py-1 rounded h-fit">
+                                        {ref}
+                                    </span>
+                                    <span className="text-slate-700 text-sm">
+                                        {MITIGATIONS_DB[ref] || "Mitigation details not found in database."}
+                                    </span>
+                                    </div>
+                                ))
+                                ) : (
+                                    <div className="text-slate-400 italic text-sm">No specific mitigations linked in this dataset.</div>
+                                )}
+                            </div>
+                            </div>
+                        )}
+                        </div>
+                    );
+                    })}
+                </div>
+                </div>
+            );
+        };
+
+        const SectionRenderer = ({ section }) => {
+            return (
+                <div className="max-w-4xl mx-auto p-6">
+                <div className="mb-8 pb-6 border-b border-gray-200">
+                    <div className="flex items-center gap-3 mb-4">
+                        <div className="p-2 bg-blue-100 rounded-lg">
+                            <Icons.FileText className="text-blue-600" size={24} />
+                        </div>
+                        <h1 className="text-3xl font-bold text-slate-900">{section.title}</h1>
+                    </div>
+                    
+                    {section.tags && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                        {section.tags.map(tag => (
+                        <span key={tag} className="flex items-center text-xs font-medium text-slate-600 bg-slate-100 px-2 py-1 rounded-full">
+                            <Icons.Tag size={12} className="mr-1" />
+                            {tag}
+                        </span>
+                        ))}
+                    </div>
+                    )}
+                </div>
+
+                <div className="prose prose-slate max-w-none">
+                    {typeof section.content === 'string' ? (
+                    <p className="whitespace-pre-wrap text-lg leading-relaxed text-slate-700">
+                        {section.content}
+                    </p>
+                    ) : (
+                    section.content
+                    )}
+                </div>
+
+                {section.subsections && (
+                    <div className="mt-12 space-y-8">
+                    {section.subsections.map(sub => (
+                        <div key={sub.id} id={`sub-${sub.id}`} className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                        <h3 className="text-xl font-bold text-slate-800 mb-3">{sub.title}</h3>
+                        <div className="text-slate-600 leading-relaxed whitespace-pre-wrap">
+                            {sub.content}
+                        </div>
+                        </div>
+                    ))}
+                    </div>
+                )}
+                </div>
+            );
+        };
+
+        const GlobalSearch = ({ onResultClick }) => {
+            const [query, setQuery] = useState('');
+            const [results, setResults] = useState([]);
+
+            useEffect(() => {
+                if (!query.trim()) {
+                setResults([]);
+                return;
+                }
+
+                const lowerQuery = query.toLowerCase();
+                const newResults = [];
+
+                // Search Sections
+                SECTIONS.forEach(section => {
+                // Check title
+                if (section.title.toLowerCase().includes(lowerQuery)) {
+                    newResults.push({
+                    id: section.id,
+                    title: section.title,
+                    preview: 'Section Header',
+                    type: 'Section'
+                    });
+                } 
+                // Check content string
+                else if (typeof section.content === 'string' && section.content.toLowerCase().includes(lowerQuery)) {
+                    newResults.push({
+                        id: section.id,
+                        title: section.title,
+                        preview: `...${section.content.substring(section.content.toLowerCase().indexOf(lowerQuery), section.content.toLowerCase().indexOf(lowerQuery) + 60)}...`,
+                        type: 'Section'
+                    });
+                }
+
+                // Check subsections
+                if (section.subsections) {
+                    section.subsections.forEach(sub => {
+                        if (typeof sub.content === 'string' && sub.content.toLowerCase().includes(lowerQuery)) {
+                            newResults.push({
+                                id: section.id,
+                                title: `${section.title} > ${sub.title}`,
+                                preview: sub.content,
+                                type: 'Section'
+                            });
+                        }
+                    });
+                }
+                });
+
+                // Search Threats
+                THREATS_DATA.forEach(threat => {
+                    if (threat.description.toLowerCase().includes(lowerQuery) || (threat.example && threat.example.toLowerCase().includes(lowerQuery))) {
+                        newResults.push({
+                            id: 'annex-5',
+                            title: `Annex 5: Threat ${threat.id}`,
+                            preview: threat.description,
+                            type: 'Threat'
+                        });
+                    }
+                });
+
+                setResults(newResults);
+            }, [query]);
+
+            return (
+                <div className="max-w-3xl mx-auto p-6">
+                <div className="mb-8 text-center">
+                    <h2 className="text-2xl font-bold text-slate-900 mb-2">Search Regulation</h2>
+                    <p className="text-slate-500">Search across definitions, requirements, threats, and mitigations.</p>
+                </div>
+
+                <div className="relative mb-8">
+                    <Icons.Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                    <input
+                    autoFocus
+                    type="text"
+                    className="w-full pl-12 pr-4 py-4 text-lg border border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    placeholder="Type to search (e.g., 'CSMS', 'Spoofing', 'Approval')..."
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    />
+                </div>
+
+                <div className="space-y-3">
+                    {results.map((result, idx) => (
+                    <button
+                        key={`${result.id}-${idx}`}
+                        onClick={() => onResultClick(result.id)}
+                        className="w-full text-left bg-white p-4 rounded-xl border border-gray-200 hover:border-blue-400 hover:shadow-md transition-all group"
+                    >
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <div className="flex items-center gap-2 mb-1">
+                                    <span className={`text-xs font-bold px-2 py-0.5 rounded ${result.type === 'Threat' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
+                                        {result.type}
+                                    </span>
+                                    <h3 className="font-bold text-slate-800 group-hover:text-blue-600">{result.title}</h3>
+                                </div>
+                                <p className="text-slate-500 text-sm line-clamp-2">{result.preview}</p>
+                            </div>
+                            <Icons.ChevronRight className="text-gray-300 group-hover:text-blue-500" />
+                        </div>
+                    </button>
+                    ))}
+                    {query && results.length === 0 && (
+                        <div className="text-center text-gray-400 py-8">No results found.</div>
+                    )}
+                </div>
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [currentView, setCurrentView] = useState(ViewType.DOCUMENT);
+            const [currentSectionId, setCurrentSectionId] = useState(SECTIONS[0].id);
+            const [isMobileOpen, setIsMobileOpen] = useState(false);
+
+            const handleSectionSelect = (id) => {
+                setCurrentSectionId(id);
+                if (id === 'annex-5') {
+                    setCurrentView(ViewType.THREAT_EXPLORER);
+                } else {
+                    setCurrentView(ViewType.DOCUMENT);
+                }
+                window.scrollTo(0, 0);
+            };
+
+            const handleResultClick = (id) => {
+                handleSectionSelect(id);
+            };
+
+            const currentSection = SECTIONS.find(s => s.id === currentSectionId);
+
+            const renderContent = () => {
+                if (currentView === ViewType.SEARCH) {
+                    return <GlobalSearch onResultClick={handleResultClick} />;
+                }
+                if (currentView === ViewType.THREAT_EXPLORER) {
+                    return <ThreatExplorer />;
+                }
+                if (currentSection) {
+                    return <SectionRenderer section={currentSection} />;
+                }
+                return <div>Section not found</div>;
+            };
+
+            return (
+                <div className="flex min-h-screen bg-gray-50">
+                    <Sidebar
+                        currentSectionId={currentSectionId}
+                        onSectionSelect={handleSectionSelect}
+                        currentView={currentView}
+                        onViewChange={setCurrentView}
+                        isMobileOpen={isMobileOpen}
+                        setIsMobileOpen={setIsMobileOpen}
+                    />
+
+                    <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
+                        {/* Mobile Header */}
+                        <div className="md:hidden bg-white border-b border-gray-200 p-4 flex items-center">
+                        <button onClick={() => setIsMobileOpen(true)} className="mr-4">
+                            <Icons.Menu className="text-slate-600" />
+                        </button>
+                        <span className="font-bold text-slate-800">UNECE R155</span>
+                        </div>
+
+                        {/* Content Area */}
+                        <div className="flex-1 overflow-y-auto">
+                        {renderContent()}
+                        </div>
+                    </main>
+                </div>
+            );
+        };
+
+        const rootElement = document.getElementById('root');
+        const root = ReactDOM.createRoot(rootElement);
+        root.render(<App />);
+    </script>
+</body>
 </html>
